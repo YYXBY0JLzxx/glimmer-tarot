@@ -2,6 +2,5 @@
 
 https://yyxby0jlzxx.github.io/glimmer-tarot
 
-![Uploading 屏幕截图 2026-01-05 221801.jpg…]()
 
 https://yyxby0jlzxx.github.io/glimmer-tarot/history.html
