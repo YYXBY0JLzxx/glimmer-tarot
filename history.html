@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>微光进化：星尘烟花档案馆</title>
+    <style>
+        :root {
+            --gold: #d4af37;
+            --accent: #ffae42;
+            --bg-dark: #08080a;
+            --glass: rgba(255, 255, 255, 0.08);
+            --card-border: rgba(212, 175, 55, 0.4);
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background: var(--bg-dark); color: #fff;
+            font-family: "PingFang SC", "STHeiti", sans-serif;
+            overflow: hidden;
+        }
+
+        /* 静态星尘背景：融合 bg.png */
+        #universe {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('bg.png') no-repeat center center;
+            background-size: cover; opacity: 0.15; filter: blur(2px);
+            z-index: 1;
+        }
+
+        /* 动态粒子层 */
+        #particle-canvas {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 2; pointer-events: none;
+        }
+
+        /* 顶部仪式感文字 */
+        header {
+            position: absolute; top: 5%; width: 100%; text-align: center;
+            z-index: 100; pointer-events: none;
+        }
+        header h1 { font-size: 1.2rem; letter-spacing: 5px; color: var(--gold); margin: 0; text-shadow: 0 0 15px rgba(212,175,55,0.6); }
+        header p { font-size: 0.7rem; opacity: 0.4; margin-top: 8px; }
+
+        /* 微光节点：烟花引信 */
+        .glimmer {
+            position: absolute; width: 16px; height: 16px;
+            background: #fff; border-radius: 50%;
+            box-shadow: 0 0 15px 2px var(--accent), 0 0 30px #fff;
+            cursor: pointer; z-index: 50;
+            transition: transform 0.3s;
+            animation: breathe 4s infinite ease-in-out;
+        }
+        @keyframes breathe { 0%, 100% { transform: scale(1); opacity: 0.6; } 50% { transform: scale(1.4); opacity: 1; } }
+
+        /* 跳转卡片：烟花释放后的结果 */
+        .info-card {
+            position: absolute; width: 220px; background: var(--glass);
+            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--card-border); border-radius: 16px;
+            padding: 20px; z-index: 200; opacity: 0; pointer-events: none;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-decoration: none; color: #fff;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+        .info-card.active { opacity: 1; pointer-events: auto; transform: translate(-50%, -120%) scale(1); }
+
+        .info-card .ver-tag { font-size: 0.6rem; color: var(--gold); font-weight: bold; margin-bottom: 8px; }
+        .info-card .ver-title { font-size: 1rem; margin-bottom: 10px; display: block; }
+        .info-card .ver-desc { font-size: 0.75rem; color: rgba(255,255,255,0.6); line-height: 1.5; }
+
+        /* 拼图绽放布局 */
+        .grid-container {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            width: 90%; max-width: 900px; display: none;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px; z-index: 300;
+        }
+        body.is-bloomed .grid-container { display: grid; }
+        body.is-bloomed .glimmer { display: none; }
+
+        .grid-card {
+            background: rgba(255,255,255,0.05); border: 1px solid var(--gold);
+            border-radius: 12px; padding: 15px; text-decoration: none; color: #fff;
+            text-align: center; transition: 0.3s;
+        }
+        .grid-card:active { transform: scale(0.95); }
+
+        /* 底部印章按钮 */
+        #bloom-trigger {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            width: 65px; height: 65px;
+            background: url('seal.png') no-repeat center/contain;
+            border-radius: 50%; cursor: pointer; z-index: 400;
+            filter: drop-shadow(0 0 15px var(--gold));
+            transition: all 0.3s;
+        }
+        #bloom-trigger:active { transform: translateX(-50%) scale(0.9); }
+
+        /* 水印 */
+        .watermark-bg {
+            position: absolute; bottom: 20px; right: 20px;
+            width: 80px; opacity: 0.1; pointer-events: none; z-index: 1;
+        }
+
+        @media (max-width: 600px) {
+            .grid-container { grid-template-columns: repeat(2, 1fr); }
+            .info-card { width: 180px; padding: 15px; }
+        }
+    </style>
+</head>
+<body onclick="closeAll()">
+
+    <div id="universe"></div>
+    <canvas id="particle-canvas"></canvas>
+
+    <header>
+        <h1>微光进化：星尘烟花</h1>
+        <p>Glimmer Evolution · Fireworks Mosaic</p>
+    </header>
+
+    <div id="stage"></div>
+
+    <div class="grid-container" id="grid-container"></div>
+
+    <div id="bloom-trigger" onclick="event.stopPropagation(); toggleBloom()"></div>
+
+    <img src="watermark.png" class="watermark-bg">
+
+    <script>
+        const versions = [
+            { id: "V1", title: "荒地版", desc: "只见金句，不觉有用。那是寻找真实的起点。", url: "v1.html" },
+            { id: "V2", title: "校准版", desc: "第一次寻找星芒。开始学会克制与聚焦。", url: "v2.html" },
+            { id: "V3", title: "呼吸版", desc: "赋予文字呼吸感。让知识连接生活。", url: "v3.html" },
+            { id: "V4", title: "实体版", desc: "心意需要载体。让数字信号带上温度。", url: "v4.html" },
+            { id: "V5", title: "定魂版", desc: "深渊中的真实。找到了那根定海神针。", url: "index.html" }
+        ];
+
+        const canvas = document.getElementById('particle-canvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        let isBloomed = false;
+
+        // 设置画布大小
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.onresize = resize;
+        resize();
+
+        // 烟花粒子类
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x; this.y = y;
+                this.color = color;
+                this.angle = Math.random() * Math.PI * 2;
+                this.speed = Math.random() * 4 + 2;
+                this.friction = 0.95;
+                this.gravity = 0.1;
+                this.opacity = 1;
+                this.life = Math.random() * 30 + 20;
+            }
+            update() {
+                this.speed *= this.friction;
+                this.x += Math.cos(this.angle) * this.speed;
+                this.y += Math.sin(this.angle) * this.speed + this.gravity;
+                this.opacity -= 0.02;
+                this.life--;
+            }
+            draw() {
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function createFirework(x, y) {
+            for (let i = 0; i < 40; i++) {
+                particles.push(new Particle(x, y, '#d4af37'));
+            }
+        }
+
+        function animate() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            particles = particles.filter(p => p.life > 0 && p.opacity > 0);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animate);
+        }
+        animate();
+
+        // 初始化节点
+        function init() {
+            const stage = document.getElementById('stage');
+            const grid = document.getElementById('grid-container');
+
+            versions.forEach((v, i) => {
+                const g = document.createElement('div');
+                g.className = 'glimmer';
+                // 随机分布位置
+                const posX = 15 + Math.random() * 70;
+                const posY = 15 + Math.random() * 55;
+                g.style.left = posX + '%';
+                g.style.top = posY + '%';
+                g.style.animationDelay = (i * 0.5) + 's';
+
+                g.onclick = (e) => {
+                    e.stopPropagation();
+                    const rect = g.getBoundingClientRect();
+                    createFirework(rect.left + 8, rect.top + 8);
+                    showCard(v, posX, posY);
+                };
+                stage.appendChild(g);
+
+                // 预建拼图卡片
+                const gc = document.createElement('a');
+                gc.href = v.url;
+                gc.className = 'grid-card';
+                gc.innerHTML = `
+                    <div class="ver-tag">${v.id}</div>
+                    <div style="font-size:0.9rem; font-weight:bold;">${v.title}</div>
+                `;
+                grid.appendChild(gc);
+            });
+        }
+
+        function showCard(data, x, y) {
+            closeAll();
+            const card = document.createElement('a');
+            card.href = data.url;
+            card.className = 'info-card active';
+            card.style.left = x + '%';
+            card.style.top = y + '%';
+            card.innerHTML = `
+                <div class="ver-tag">${data.id} VERSION</div>
+                <div class="ver-title">${data.title}</div>
+                <div class="ver-desc">${data.desc}</div>
+                <div style="margin-top:15px; font-size:0.6rem; color:var(--gold); text-align:right;">点击进入 →</div>
+            `;
+            document.body.appendChild(card);
+        }
+
+        function toggleBloom() {
+            isBloomed = !isBloomed;
+            document.body.classList.toggle('is-bloomed', isBloomed);
+            closeAll();
+        }
+
+        function closeAll() {
+            const cards = document.querySelectorAll('.info-card');
+            cards.forEach(c => c.remove());
+        }
+
+        init();
+    </script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>糖糖的微光建议：抽取你的今日行动牌</title>
+    <style>
+        /* 全局样式：消除手机端默认间距 */
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            font-family: "PingFang SC", "STHeiti", sans-serif;
+            background-color: #f4efe6;
+            overflow: hidden; /* 防止页面整体晃动 */
+        }
+        
+        #app-container {
+            width: 100%; height: 100%;
+            /* 修正点：将 bg.jpg 改为 bg.png */
+            background: url('bg.png') no-repeat center center;
+            background-size: cover;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            position: relative;
+        }
+
+        /* 引导语：优化了手机端的字号和间距 */
+        #guide-text {
+            color: #5d4037;
+            text-align: center; margin-bottom: 30px;
+            line-height: 1.6; font-size: 1.1rem;
+            animation: breathe 3s infinite ease-in-out;
+            padding: 0 30px;
+            text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+        }
+        @keyframes breathe { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+
+        /* 抽卡按钮：火漆印章 */
+        #draw-btn {
+            width: 100px; height: 100px;
+            background: url('seal.png') no-repeat center/contain;
+            border: none; cursor: pointer;
+            transition: transform 0.2s;
+            -webkit-tap-highlight-color: transparent;
+            z-index: 10;
+        }
+        #draw-btn:active { transform: scale(0.9); }
+        
+        /* 卡牌容器：手机端适配关键 */
+        #card-container {
+            display: none;
+            width: 88%; max-width: 340px; 
+            height: 70vh; max-height: 520px;
+            perspective: 1200px;
+        }
+        #card-inner {
+            position: relative; width: 100%; height: 100%;
+            transition: transform 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            transform-style: preserve-3d;
+        }
+
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 18px;
+            box-shadow: 0 15px 45px rgba(0,0,0,0.25);
+            background: #fffcf5;
+            border: 2px solid #d4af37;
+            padding: 25px; box-sizing: border-box;
+            display: flex; flex-direction: column;
+        }
+
+        .card-back { background: #8B5A2B; } /* 卡背颜色 */
+
+        .card-front {
+            transform: rotateY(180deg);
+            color: #4e342e;
+            background-image: linear-gradient(135deg, #fffcf5 0%, #fdf5e6 100%);
+        }
+
+        /* 内容精细排版 */
+        .card-title {
+            font-size: 1.3rem; font-weight: bold; color: #b8860b;
+            margin-bottom: 12px; border-bottom: 1px solid #eee; padding-bottom: 8px;
+        }
+        .card-quote {
+            font-style: italic; font-size: 0.9rem; margin-bottom: 15px; color: #795548;
+            line-height: 1.4;
+        }
+        /* 行动正文：增加滚动条支持，防止文字挤出卡片 */
+        .card-action {
+            font-size: 0.95rem; line-height: 1.7; text-align: left;
+            overflow-y: auto; padding-right: 5px;
+            scrollbar-width: none; /* 隐藏滚动条 */
+        }
+        .card-action::-webkit-scrollbar { display: none; }
+
+        .card-footer {
+            font-size: 11px; color: #a1887f; margin-top: 15px; text-align: center;
+        }
+
+        /* 水印：确保在卡片右下角 */
+        .watermark {
+            position: absolute; bottom: 10px; right: 10px;
+            width: 45px; opacity: 0.3; pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div id="guide-text">
+            <p>嘘，把浮躁关在门外。<br>闭眼三秒，问自己：<br>“我最近囤积的哪条干货，<br>最让我感到虚假的繁荣？”</p>
+        </div>
+        
+        <button id="draw-btn" onclick="drawCard()"></button>
+
+        <div id="card-container">
+            <div id="card-inner">
+                <div class="card-face card-back"></div>
+                <div class="card-face card-front">
+                    <div class="card-title" id="c-title"></div>
+                    <div class="card-quote" id="c-quote"></div>
+                    <div class="card-action" id="c-action"></div>
+                    <div class="card-footer">[ 闯关者：糖糖 ] × [ 监制：摘星星的倔驴 ]</div>
+                    <img src="watermark.png" class="watermark">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const cardsData = [
+            {
+                title: "微光·截断 (The Severance)",
+                quote: "“贪多嚼不烂。今天的你，只需要这一颗螺丝钉。”",
+                action: "<b>【只偷一颗螺丝钉】</b><br>不要保存整篇文章。<br><b>动作：</b>打开收藏夹，只抄写最打动你的那 1 句话/词。有余力就把其他长划线删掉。"
+            },
+            {
+                title: "微光·移植 (The Transplant)",
+                quote: "“智慧的价值，在于它能长在你生活的哪片土壤里。”",
+                action: "<b>【给它搬个家】</b><br>不要只感叹“好厉害”。<br><b>动作：</b>问自己：“这句话能用在哪里？”<br><b>记录：</b>引用原话 + “比如：当我……的时候，可以用它。”"
+            },
+            {
+                title: "微光·缝合 (The Stitching)",
+                quote: "“完美的计划是行动的敌人。做个缝合怪，把这一步缝进你的习惯里。”",
+                action: "<b>【做个“缝合怪”】</b><br>不要因为看不完教程而焦虑。<br><b>动作：</b>只挑出第 1 步，结合现状，出一个“糖糖版 1.0 小行动”。"
+            }
+        ];
+
+        let hasDrawn = false;
+
+        function drawCard() {
+            if (hasDrawn) return;
+            hasDrawn = true;
+
+            document.getElementById('guide-text').style.transition = 'opacity 0.5s';
+            document.getElementById('guide-text').style.opacity = '0';
+            document.getElementById('draw-btn').style.transition = 'transform 0.5s, opacity 0.5s';
+            document.getElementById('draw-btn').style.transform = 'scale(0) rotate(180deg)';
+            document.getElementById('draw-btn').style.opacity = '0';
+            
+            setTimeout(() => {
+                document.getElementById('guide-text').style.display = 'none';
+                document.getElementById('draw-btn').style.display = 'none';
+                
+                const randomCard = cardsData[Math.floor(Math.random() * cardsData.length)];
+                document.getElementById('c-title').innerText = randomCard.title;
+                document.getElementById('c-quote').innerText = randomCard.quote;
+                document.getElementById('c-action').innerHTML = randomCard.action;
+
+                const container = document.getElementById('card-container');
+                container.style.display = 'block';
+                // 强制触发翻转
+                setTimeout(() => {
+                    document.getElementById('card-inner').style.transform = 'rotateY(180deg)';
+                }, 50);
+            }, 500);
+        }
+    </script>
+</body>
+</html>

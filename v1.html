@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>糖糖的微光建议：抽取你的今日行动牌</title>
+    <style>
+        /* 全局样式：营造复古信件氛围 */
+        body, html {
+            margin: 0; padding: 0; height: 100%;
+            font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+            background-color: #f4efe6; /* 备用背景色 */
+            overflow: hidden; /* 禁止页面滚动 */
+        }
+        #app-container {
+            width: 100%; height: 100%;
+            /* 使用你的背景图，居中裁剪 */
+            background: url('bg.jpg') no-repeat center center;
+            background-size: cover;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            position: relative;
+        }
+        /* 引导语：呼吸灯效果 */
+        #guide-text {
+            color: #8B5A2B; /* 复古棕色 */
+            text-align: center; margin-bottom: 40px;
+            line-height: 1.8; font-size: 16px;
+            animation: breathe 3s infinite ease-in-out;
+            padding: 0 20px;
+        }
+        @keyframes breathe { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
+        /* 抽卡按钮：火漆印章 */
+        #draw-btn {
+            width: 120px; height: 120px;
+            background: url('seal.png') no-repeat center/contain;
+            border: none; cursor: pointer;
+            /* 点击时的微动效 */
+            transition: transform 0.2s;
+            -webkit-tap-highlight-color: transparent; /* 去除移动端点击高亮 */
+        }
+        #draw-btn:active { transform: scale(0.95); }
+        
+        /* 卡片容器：塔罗牌翻转的核心 */
+        #card-container {
+            display: none; /* 默认隐藏 */
+            width: 85%; max-width: 350px; height: 60%; max-height: 500px;
+            perspective: 1000px; /* 3D透视 */
+        }
+        #card-inner {
+            position: relative; width: 100%; height: 100%;
+            text-align: center;
+            transition: transform 0.8s; /* 翻转动画时长 */
+            transform-style: preserve-3d;
+        }
+        /* 卡片正反面通用样式 */
+        .card-face {
+            position: absolute; width: 100%; height: 100%;
+            -webkit-backface-visibility: hidden; backface-visibility: hidden;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            background: #fffaf0; /* 米黄色卡纸 */
+            border: 3px solid #d4af37; /* 金色边框 */
+            padding: 30px 20px; box-sizing: border-box;
+            display: flex; flex-direction: column;
+        }
+        /* 卡背：初始显示 */
+        .card-back { background: #8B5A2B; /* 可替换为卡背花纹图 */ }
+        /* 卡面：翻转后显示 */
+        .card-front {
+            transform: rotateY(180deg);
+            color: #5d4037;
+        }
+        /* 卡片内容排版 */
+        .card-title {
+            font-size: 22px; font-weight: bold; color: #d4af37;
+            margin-bottom: 15px; letter-spacing: 2px;
+        }
+        .card-quote {
+            font-style: italic; font-size: 14px; margin-bottom: 25px; color: #888;
+        }
+        .card-action {
+            font-size: 16px; line-height: 1.6; text-align: left; flex-grow: 1;
+        }
+        .card-footer {
+            font-size: 12px; color: #999; margin-top: 20px;
+        }
+        /* 水印：你的星芒爪印 */
+        .watermark {
+            position: absolute; bottom: 15px; right: 15px;
+            width: 50px; opacity: 0.4;
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <div id="guide-text">
+            <p>嘘，把浮躁关在门外。<br>闭眼三秒，问自己：<br>“我最近囤积的哪条干货，<br>最让我感到虚假的繁荣？”</p>
+        </div>
+        <button id="draw-btn" onclick="drawCard()"></button>
+
+        <div id="card-container">
+            <div id="card-inner">
+                <div class="card-face card-back"></div> <div class="card-face card-front">
+                    <div class="card-title" id="c-title"></div>
+                    <div class="card-quote" id="c-quote"></div>
+                    <div class="card-action" id="c-action"></div>
+                    <div class="card-footer">[ 闯关者：糖糖 ] × [ 监制：摘星星的倔驴 ]</div>
+                    <img src="watermark.png" class="watermark"> </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 卡片数据库：我为你设计的塔罗版文案
+        const cardsData = [
+            {
+                title: "微光·截断 (The Severance)",
+                quote: "“贪多嚼不烂。今天的你，只需要这一颗螺丝钉。”",
+                action: "【只偷一颗螺丝钉】<br>不要保存整篇文章。<br>动作：打开收藏，只抄写最打动你的那 1 句话/词。有余力就把其他段落删掉。"
+            },
+            {
+                title: "微光·移植 (The Transplant)",
+                quote: "“智慧的价值，在于它能长在你生活的哪片土壤里。”",
+                action: "【给它搬个家】<br>不要只感叹“好厉害”。<br>动作：问自己：“这句话能用在哪里？”<br>记录：引用 + “比如：当我……的时候，可以用它。”"
+            },
+            {
+                title: "微光·缝合 (The Stitching)",
+                quote: "“完美的计划是行动的敌人。做个缝合怪，把这一步缝进你的习惯里。”",
+                action: "【做个“缝合怪”】<br>不要因为看不完教程而焦虑。<br>动作：只挑出第 1 步，结合现状，出一个“糖糖版 1.0 小行动”。"
+            }
+        ];
+
+        let hasDrawn = false; // 防止重复点击
+
+        function drawCard() {
+            if (hasDrawn) return;
+            hasDrawn = true;
+
+            // 1. 隐藏引导语和按钮
+            document.getElementById('guide-text').style.display = 'none';
+            document.getElementById('draw-btn').style.display = 'none';
+            
+            // 2. 随机抽取一张卡片
+            const randomCard = cardsData[Math.floor(Math.random() * cardsData.length)];
+            // 3. 填充内容
+            document.getElementById('c-title').innerText = randomCard.title;
+            document.getElementById('c-quote').innerText = randomCard.quote;
+            document.getElementById('c-action').innerHTML = randomCard.action; // 使用innerHTML以支持换行
+
+            // 4. 显示卡片并执行翻转动画
+            const container = document.getElementById('card-container');
+            container.style.display = 'block';
+            // 强制重绘，确保动画触发
+            void container.offsetWidth;
+            document.getElementById('card-inner').style.transform = 'rotateY(180deg)';
+        }
+    </script>
+</body>
+</html>
